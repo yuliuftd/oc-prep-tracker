@@ -52,6 +52,7 @@ export interface AppSettings {
   coachingPortalUrl: string
   githubToken?: string
   githubRepo?: string
+  holidayOverrides?: HolidayRange[]
 }
 
 export type CheckInMap = Record<string, DailyCheckIn>

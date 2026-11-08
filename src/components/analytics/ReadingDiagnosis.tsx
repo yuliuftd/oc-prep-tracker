@@ -16,10 +16,10 @@ interface ReadingDiagnosisProps {
 }
 
 const SECTIONS: { key: keyof ReadingErrorBreakdown; label: string }[] = [
-  { key: 'long_passage', label: '长文理解' },
-  { key: 'poetry', label: '诗歌理解' },
-  { key: 'cloze_gap_fill', label: '完形填空' },
-  { key: 'multi_extract', label: '多段配对' },
+  { key: 'long_passage', label: 'Long passage' },
+  { key: 'poetry', label: 'Poetry' },
+  { key: 'cloze_gap_fill', label: 'Cloze gap-fill' },
+  { key: 'multi_extract', label: 'Multi-extract matching' },
 ]
 
 export default function ReadingDiagnosis({ checkins }: ReadingDiagnosisProps) {
@@ -63,19 +63,19 @@ export default function ReadingDiagnosis({ checkins }: ReadingDiagnosisProps) {
       <div className="section-heading chart-heading">
         <div>
           <p className="eyebrow">READING ERROR BREAKDOWN</p>
-          <h2>阅读薄弱板块</h2>
+          <h2>Reading Error Breakdown</h2>
         </div>
-        <span className="error-total">{totalErrors} <small>累计错题</small></span>
+        <span className="error-total">{totalErrors} <small>total errors</small></span>
       </div>
       {totalErrors === 0 ? (
-        <p className="chart-empty">记录阅读测验的题型错题数后，会在此生成薄弱项诊断。</p>
+        <p className="chart-empty">Record Reading errors by section to see your areas for improvement.</p>
       ) : (
         <>
           {weakest && (
             <div className="weakest-callout">
               <span className="weakest-marker" />
-              当前优先突破：<strong>{weakest.label}</strong>
-              <span>{weakest.share.toFixed(0)}% 的错题来自此板块</span>
+              Focus next: <strong>{weakest.label}</strong>
+              <span>{weakest.share.toFixed(0)}% of errors are in this section</span>
             </div>
           )}
           <div className="chart-wrap diagnosis-chart">
@@ -103,8 +103,8 @@ export default function ReadingDiagnosis({ checkins }: ReadingDiagnosisProps) {
                 />
                 <Tooltip
                   formatter={(value, _name, item) => [
-                    `${value} 题（${Number(item.payload.share).toFixed(1)}%）`,
-                    '累计错题',
+                    `${value} errors (${Number(item.payload.share).toFixed(1)}%)`,
+                    'Total errors',
                   ]}
                   contentStyle={{
                     border: '1px solid #e6ece7',
@@ -112,7 +112,7 @@ export default function ReadingDiagnosis({ checkins }: ReadingDiagnosisProps) {
                     fontSize: 10,
                   }}
                 />
-                <Bar dataKey="errors" name="累计错题" barSize={17} radius={[0, 7, 7, 0]}>
+                <Bar dataKey="errors" name="Total errors" barSize={17} radius={[0, 7, 7, 0]}>
                   {data.map((section) => (
                     <Cell
                       key={section.key}

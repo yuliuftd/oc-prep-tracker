@@ -15,6 +15,7 @@ import type {
   CheckInMap,
   DailyCheckIn,
   DayMode,
+  HolidayRange,
   TaskTemplate,
   Weekday,
 } from '../types'
@@ -31,20 +32,26 @@ const dateKey = (date: DateInput): string => {
 const weekdayOf = (date: DateInput): Weekday =>
   parseISO(dateKey(date)).getDay() as Weekday
 
-export function getDayMode(date: DateInput): DayMode {
+export function getDayMode(
+  date: DateInput,
+  holidayOverrides: HolidayRange[] = [],
+): DayMode {
   const key = dateKey(date)
-  return NSW_SCHOOL_HOLIDAYS.some(
+  return [...NSW_SCHOOL_HOLIDAYS, ...holidayOverrides].some(
     ({ startDate, endDate }) => key >= startDate && key <= endDate,
   )
     ? 'HOLIDAY'
     : 'TERM'
 }
 
-export function getTasksForDate(date: DateInput): TaskTemplate[] {
+export function getTasksForDate(
+  date: DateInput,
+  holidayOverrides: HolidayRange[] = [],
+): TaskTemplate[] {
   const key = dateKey(date)
   const weekday = weekdayOf(date)
 
-  if (getDayMode(key) === 'TERM') {
+  if (getDayMode(key, holidayOverrides) === 'TERM') {
     return TERM_WEEKLY_TEMPLATE[weekday]
   }
   if (weekday === 6) {
@@ -78,6 +85,7 @@ export function generateBurnUpSeries(
   checkins: CheckInMap,
   startDate = PLAN_START_DATE,
   endDate = EXAM_DATE,
+  holidayOverrides: HolidayRange[] = [],
 ): BurnUpPoint[] {
   const dates = eachDayOfInterval({
     start: parseISO(startDate),
@@ -88,7 +96,7 @@ export function generateBurnUpSeries(
 
   return dates.map((date) => {
     const key = format(date, 'yyyy-MM-dd')
-    plannedMinutes += getTasksForDate(key).reduce(
+    plannedMinutes += getTasksForDate(key, holidayOverrides).reduce(
       (total, dailyTask) => total + dailyTask.durationMinutes,
       0,
     )
@@ -97,8 +105,11 @@ export function generateBurnUpSeries(
   })
 }
 
-export function getPlannedMinutesForDate(date: DateInput): number {
-  return getTasksForDate(date).reduce(
+export function getPlannedMinutesForDate(
+  date: DateInput,
+  holidayOverrides: HolidayRange[] = [],
+): number {
+  return getTasksForDate(date, holidayOverrides).reduce(
     (total, dailyTask) => total + dailyTask.durationMinutes,
     0,
   )
@@ -127,12 +138,15 @@ function createSpellingBeeUrl(baseUrl: string, view: 'browse' | 'quiz'): string 
   return url.toString()
 }
 
-export function createEmptyCheckIn(date: DateInput): DailyCheckIn {
+export function createEmptyCheckIn(
+  date: DateInput,
+  holidayOverrides: HolidayRange[] = [],
+): DailyCheckIn {
   const key = dateKey(date)
   return {
     date: key,
-    dayMode: getDayMode(key),
-    plannedMinutes: getPlannedMinutesForDate(key),
+    dayMode: getDayMode(key, holidayOverrides),
+    plannedMinutes: getPlannedMinutesForDate(key, holidayOverrides),
     actualMinutes: 0,
     completedTaskIds: [],
     quizLogs: [],

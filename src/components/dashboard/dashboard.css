@@ -111,6 +111,45 @@
   color: #28775b;
 }
 
+.sync-top-button {
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 9px;
+  border: 1px solid #e5eae5;
+  border-radius: 10px;
+  background: #fff;
+  color: #61766a;
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.sync-top-button:hover:not(:disabled) {
+  border-color: #b7d4c2;
+  color: #28775b;
+}
+
+.sync-top-button:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+
+.sync-status {
+  margin: 8px 0 -12px;
+  font-size: 10px;
+  text-align: right;
+}
+
+.sync-status.success {
+  color: #37815b;
+}
+
+.sync-status.error {
+  color: #b34242;
+}
+
 .streak-pill,
 .exam-pill {
   min-height: 36px;
@@ -1072,6 +1111,11 @@
     gap: 5px;
   }
 
+  .sync-top-button {
+    padding: 0 7px;
+    font-size: 9px;
+  }
+
   .streak-pill,
   .exam-pill {
     min-height: 32px;
@@ -1282,6 +1326,10 @@
     background: #f2a28a;
   }
 
+  .custom-holiday-swatch {
+    background: #9ebce0;
+  }
+
   .analytics-grid {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
@@ -1421,6 +1469,52 @@
     width: 100%;
   }
 
+  .holiday-override-form {
+    display: grid;
+    grid-template-columns: minmax(100px, 1fr) repeat(2, minmax(120px, 1fr)) auto;
+    align-items: end;
+    gap: 8px;
+  }
+
+  .holiday-override-form .secondary-button {
+    min-height: 36px;
+    padding: 0 10px;
+    font-size: 10px;
+  }
+
+  .holiday-override-list {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    margin-top: 12px;
+  }
+
+  .holiday-override-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 9px 11px;
+    border-radius: 8px;
+    background: #f5f8f5;
+  }
+
+  .holiday-override-item strong,
+  .holiday-override-item small {
+    display: block;
+  }
+
+  .holiday-override-item strong {
+    color: #45574c;
+    font-size: 10px;
+  }
+
+  .holiday-override-item small {
+    margin-top: 3px;
+    color: #87948b;
+    font-size: 9px;
+  }
+
   .sync-button {
     min-height: 34px;
     margin-top: 12px;
@@ -1554,6 +1648,10 @@
       display: none;
     }
 
+    .sync-top-button span {
+      display: none;
+    }
+
     .pace-indicator {
       padding: 6px 8px;
     }
@@ -1565,5 +1663,13 @@
 
     .config-fields {
       grid-template-columns: 1fr;
+    }
+
+    .holiday-override-form {
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .holiday-override-form .holiday-name {
+      grid-column: 1 / -1;
     }
   }

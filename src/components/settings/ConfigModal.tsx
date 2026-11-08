@@ -7,7 +7,7 @@ import {
   saveSettings,
   syncCheckinsWithGitHub,
 } from '../../services/storageService'
-import type { AppSettings, CheckInMap, PlannerData } from '../../types'
+import type { AppSettings, CheckInMap, HolidayRange, PlannerData } from '../../types'
 
 interface ConfigModalProps {
   settings: AppSettings
@@ -30,6 +30,9 @@ export default function ConfigModal({
   const [notice, setNotice] = useState('')
   const [error, setError] = useState('')
   const [isSyncing, setIsSyncing] = useState(false)
+  const [holidayName, setHolidayName] = useState('')
+  const [holidayStart, setHolidayStart] = useState('')
+  const [holidayEnd, setHolidayEnd] = useState('')
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -47,11 +50,44 @@ export default function ConfigModal({
     setError('')
   }
 
+  const addHolidayOverride = () => {
+    if (!holidayStart || !holidayEnd || holidayStart > holidayEnd) {
+      setError('Choose a valid holiday start and end date.')
+      return
+    }
+    const overrides = draft.holidayOverrides ?? []
+    if (overrides.some((range) => range.startDate === holidayStart && range.endDate === holidayEnd)) {
+      setError('That holiday date range has already been added.')
+      return
+    }
+    const range: HolidayRange = {
+      name: holidayName.trim() || 'Additional holiday',
+      startDate: holidayStart,
+      endDate: holidayEnd,
+    }
+    setDraft((current) => ({
+      ...current,
+      holidayOverrides: [...(current.holidayOverrides ?? []), range],
+    }))
+    setHolidayName('')
+    setHolidayStart('')
+    setHolidayEnd('')
+    setNotice('')
+    setError('')
+  }
+
+  const removeHolidayOverride = (index: number) => {
+    setDraft((current) => ({
+      ...current,
+      holidayOverrides: (current.holidayOverrides ?? []).filter((_, itemIndex) => itemIndex !== index),
+    }))
+  }
+
   const save = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     saveSettings(draft)
     onSettingsSaved(draft)
-    setNotice('设置已保存。')
+    setNotice('Settings saved.')
     setError('')
   }
 
@@ -65,9 +101,9 @@ export default function ConfigModal({
       const data = importDataJson(await file.text())
       setDraft(data.settings)
       onDataImported(data)
-      setNotice('数据已导入并保存。')
+      setNotice('Data imported and saved.')
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : '导入失败，请检查文件内容。')
+      setError(reason instanceof Error ? reason.message : 'Import failed. Check the selected file.')
     }
   }
 
@@ -78,9 +114,9 @@ export default function ConfigModal({
     try {
       const synced = await syncCheckinsWithGitHub(draft, checkins)
       onCheckinsSynced(synced)
-      setNotice('GitHub 同步完成。')
+      setNotice('GitHub sync completed.')
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'GitHub 同步失败。')
+      setError(reason instanceof Error ? reason.message : 'GitHub sync failed.')
     } finally {
       setIsSyncing(false)
     }
@@ -105,10 +141,10 @@ export default function ConfigModal({
         <div className="modal-header">
           <div>
             <p className="eyebrow">PERSONALIZE YOUR PLANNER</p>
-            <h2 id="config-title">设置与数据</h2>
-            <p className="modal-date">配置练习网站并管理跨设备数据。</p>
+            <h2 id="config-title">Settings & Data</h2>
+            <p className="modal-date">Configure practice links and manage your data across devices.</p>
           </div>
-          <button type="button" className="icon-button close-modal" onClick={onClose} aria-label="关闭">
+          <button type="button" className="icon-button close-modal" onClick={onClose} aria-label="Close">
             <X size={20} />
           </button>
         </div>
@@ -118,13 +154,13 @@ export default function ConfigModal({
             <section className="form-section">
               <div className="form-section-heading">
                 <div>
-                  <h3>外部练习网站</h3>
-                  <p>任务卡会根据任务类型跳转到相应网站。</p>
+                  <h3>Practice websites</h3>
+                  <p>Task cards open the configured website for each activity.</p>
                 </div>
               </div>
               <div className="config-fields">
                 <label className="field-label">
-                  SpellingBee 基础网址
+                  SpellingBee base URL
                   <input
                     type="url"
                     required
@@ -134,7 +170,7 @@ export default function ConfigModal({
                   />
                 </label>
                 <label className="field-label">
-                  OC 机构做题网站
+                  Coaching portal URL
                   <input
                     type="url"
                     placeholder="https://example.com"
@@ -148,13 +184,72 @@ export default function ConfigModal({
             <section className="form-section">
               <div className="form-section-heading">
                 <div>
-                  <h3>GitHub 跨设备同步</h3>
-                  <p>将打卡记录同步到仓库中的 data/checkins.json。</p>
+                  <h3>Holiday date overrides</h3>
+                  <p>Additional dates use the holiday study schedule. Official NSW holiday dates remain active.</p>
+                </div>
+              </div>
+              <div className="holiday-override-form">
+                <label className="field-label holiday-name">
+                  Holiday name
+                  <input
+                    type="text"
+                    placeholder="e.g. Family trip"
+                    value={holidayName}
+                    onChange={(event) => setHolidayName(event.target.value)}
+                  />
+                </label>
+                <label className="field-label">
+                  Start date
+                  <input
+                    type="date"
+                    value={holidayStart}
+                    onChange={(event) => setHolidayStart(event.target.value)}
+                  />
+                </label>
+                <label className="field-label">
+                  End date
+                  <input
+                    type="date"
+                    value={holidayEnd}
+                    onChange={(event) => setHolidayEnd(event.target.value)}
+                  />
+                </label>
+                <button type="button" className="secondary-button" onClick={addHolidayOverride}>
+                  Add date range
+                </button>
+              </div>
+              {(draft.holidayOverrides ?? []).length > 0 && (
+                <div className="holiday-override-list">
+                  {(draft.holidayOverrides ?? []).map((range, index) => (
+                    <div className="holiday-override-item" key={`${range.startDate}-${range.endDate}`}>
+                      <span>
+                        <strong>{range.name}</strong>
+                        <small>{range.startDate} – {range.endDate}</small>
+                      </span>
+                      <button
+                        type="button"
+                        className="text-button danger-text"
+                        onClick={() => removeHolidayOverride(index)}
+                        aria-label={`Remove ${range.name}`}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+
+            <section className="form-section">
+              <div className="form-section-heading">
+                <div>
+                  <h3>GitHub sync</h3>
+                  <p>Sync check-ins with data/checkins.json in your repository.</p>
                 </div>
               </div>
               <div className="config-fields">
                 <label className="field-label">
-                  仓库（owner/repository）
+                  Repository (owner/repository)
                   <input
                     type="text"
                     placeholder="username/oc-prep-tracker"
@@ -167,7 +262,7 @@ export default function ConfigModal({
                   <input
                     type="password"
                     autoComplete="new-password"
-                    placeholder="仅保存在当前浏览器"
+                    placeholder="Stored only in this browser"
                     value={draft.githubToken ?? ''}
                     onChange={(event) => update('githubToken', event.target.value)}
                   />
@@ -180,23 +275,23 @@ export default function ConfigModal({
                 disabled={isSyncing}
               >
                 {isSyncing ? <LoaderCircle className="spin" size={15} /> : <Check size={15} />}
-                {isSyncing ? '同步中…' : '立即同步打卡数据'}
+                {isSyncing ? 'Syncing…' : 'Sync check-ins now'}
               </button>
             </section>
 
             <section className="form-section">
               <div className="form-section-heading">
                 <div>
-                  <h3>备份与恢复</h3>
-                  <p>导出包含打卡和设置的 JSON 文件，或从备份恢复。</p>
+                  <h3>Backup & restore</h3>
+                  <p>Export check-ins and settings to JSON, or restore them from a backup.</p>
                 </div>
               </div>
               <div className="data-actions">
                 <button type="button" className="secondary-button" onClick={() => downloadDataExport()}>
-                  <Download size={15} /> 导出 JSON
+                  <Download size={15} /> Export JSON
                 </button>
                 <label className="secondary-button file-import">
-                  <FileUp size={15} /> 导入 JSON
+                  <FileUp size={15} /> Import JSON
                   <input
                     type="file"
                     accept="application/json,.json"
@@ -213,8 +308,8 @@ export default function ConfigModal({
           </div>
 
           <div className="modal-footer">
-            <button type="button" className="secondary-button" onClick={onClose}>关闭</button>
-            <button type="submit" className="primary-button"><Save size={15} /> 保存设置</button>
+            <button type="button" className="secondary-button" onClick={onClose}>Close</button>
+            <button type="submit" className="primary-button"><Save size={15} /> Save settings</button>
           </div>
         </form>
       </section>

@@ -13,10 +13,10 @@ interface TodayQuestsProps {
 }
 
 const SUBJECT_LABELS: Record<TaskTemplate['subject'], string> = {
-  READING: '阅读',
-  MATH: '数学',
-  THINKING_SKILLS: '思维',
-  VOCAB: '词汇',
+  READING: 'Reading',
+  MATH: 'Math',
+  THINKING_SKILLS: 'Thinking',
+  VOCAB: 'Vocabulary',
 }
 
 function TaskCard({
@@ -61,7 +61,7 @@ function TaskCard({
           type="checkbox"
           checked={checked}
           onChange={onToggle}
-          aria-label={`标记完成：${task.title}`}
+          aria-label={`Mark complete: ${task.title}`}
         />
         <span className="custom-check"><Check size={14} /></span>
       </label>
@@ -71,7 +71,7 @@ function TaskCard({
           <span className={`subject-badge ${task.subject.toLowerCase()}`}>
             {SUBJECT_LABELS[task.subject]}
           </span>
-          <span className="duration-label"><Clock3 size={13} /> {task.durationMinutes} 分钟</span>
+          <span className="duration-label"><Clock3 size={13} /> {task.durationMinutes} min</span>
         </div>
         <h3>{task.title}</h3>
         <p>{task.description}</p>
@@ -92,9 +92,9 @@ function TaskCard({
                   setIsRunning((running) => !running)
                 }
               }}
-              aria-label={secondsRemaining === 0 ? `重新开始 ${task.title} 计时` : isRunning ? '暂停计时' : '开始计时'}
+              aria-label={secondsRemaining === 0 ? `Restart timer for ${task.title}` : isRunning ? 'Pause timer' : 'Start timer'}
             >
-              {secondsRemaining === 0 ? '重来' : isRunning ? '暂停' : '开始'}
+              {secondsRemaining === 0 ? 'Restart' : isRunning ? 'Pause' : 'Start'}
             </button>
             <button
               type="button"
@@ -103,8 +103,8 @@ function TaskCard({
                 setIsRunning(false)
                 setSecondsRemaining(task.durationMinutes * 60)
               }}
-              aria-label={`重置 ${task.title} 计时`}
-              title="重置计时"
+              aria-label={`Reset timer for ${task.title}`}
+              title="Reset timer"
             >
               <RotateCcw size={13} />
             </button>
@@ -113,11 +113,11 @@ function TaskCard({
         {task.externalLinkType !== 'NONE' && (
           link ? (
             <a className="quest-link" href={link} target="_blank" rel="noopener noreferrer">
-              去练习 <ArrowUpRight size={15} />
+              Practice <ArrowUpRight size={15} />
             </a>
           ) : (
-            <span className="quest-link disabled" title="请先在设置中配置外部网站地址">
-              未配置 <ExternalLink size={14} />
+            <span className="quest-link disabled" title="Configure this website URL in Settings first">
+              Not configured <ExternalLink size={14} />
             </span>
           )
         )}
@@ -135,7 +135,7 @@ export default function TodayQuests({
   onOpenCheckIn,
 }: TodayQuestsProps) {
   const completedCount = tasks.filter((task) => completedTaskIds.includes(task.id)).length
-  const dateLabel = new Intl.DateTimeFormat('zh-CN', {
+  const dateLabel = new Intl.DateTimeFormat('en-AU', {
     month: 'long',
     day: 'numeric',
     weekday: 'long',
@@ -146,11 +146,11 @@ export default function TodayQuests({
       <div className="section-heading quest-heading">
         <div>
           <p className="eyebrow">TODAY’S QUESTS · {dateLabel}</p>
-          <h2>今日闯关</h2>
+          <h2>Today’s Quests</h2>
         </div>
         <div className="quest-progress">
-          <span>{completedCount} / {tasks.length} 完成</span>
-          <div className="progress-track" aria-label={`完成 ${completedCount} 项，共 ${tasks.length} 项`}>
+          <span>{completedCount} / {tasks.length} complete</span>
+          <div className="progress-track" aria-label={`${completedCount} of ${tasks.length} tasks complete`}>
             <span style={{ width: `${tasks.length ? (completedCount / tasks.length) * 100 : 0}%` }} />
           </div>
         </div>
@@ -169,11 +169,11 @@ export default function TodayQuests({
           ))}
         </div>
       ) : (
-        <p className="empty-state">今天没有安排的任务，休息一下也很好。</p>
+        <p className="empty-state">No tasks are scheduled for this day. Enjoy the break!</p>
       )}
 
       <button type="button" className="primary-button checkin-open" onClick={onOpenCheckIn}>
-        记录今日学习 <ArrowUpRight size={17} />
+        Log study session <ArrowUpRight size={17} />
       </button>
     </section>
   )

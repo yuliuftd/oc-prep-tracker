@@ -5,6 +5,7 @@ const SETTINGS_KEY = 'oc-prep-tracker:settings'
 const DEFAULT_SETTINGS: AppSettings = {
   spellingBeeBaseUrl: 'https://yuliuftd.github.io/SpellingBee',
   coachingPortalUrl: '',
+  holidayOverrides: [],
 }
 
 interface GitHubContentResponse {

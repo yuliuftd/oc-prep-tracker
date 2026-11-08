@@ -5,6 +5,7 @@ import { createEmptyCheckIn, getTaskUrl } from '../../utils/scheduleEngine'
 import type {
   AppSettings,
   DailyCheckIn,
+  HolidayRange,
   ReadingErrorBreakdown,
   TaskTemplate,
 } from '../../types'
@@ -14,6 +15,7 @@ interface CheckInModalProps {
   checkin?: DailyCheckIn
   tasks: TaskTemplate[]
   settings: AppSettings
+  holidayOverrides?: HolidayRange[]
   onSave: (checkin: DailyCheckIn) => void
   onClose: () => void
 }
@@ -21,16 +23,16 @@ interface CheckInModalProps {
 type QuizSubject = 'READING' | 'MATH' | 'THINKING_SKILLS'
 
 const SUBJECT_OPTIONS: { value: QuizSubject; label: string }[] = [
-  { value: 'READING', label: '阅读' },
-  { value: 'MATH', label: '数学' },
-  { value: 'THINKING_SKILLS', label: '思维' },
+  { value: 'READING', label: 'Reading' },
+  { value: 'MATH', label: 'Math' },
+  { value: 'THINKING_SKILLS', label: 'Thinking Skills' },
 ]
 
 const ERROR_SECTIONS: { key: keyof ReadingErrorBreakdown; label: string }[] = [
-  { key: 'long_passage', label: '长篇文章' },
-  { key: 'poetry', label: '诗歌理解' },
-  { key: 'cloze_gap_fill', label: '完形填空' },
-  { key: 'multi_extract', label: '多文本匹配' },
+  { key: 'long_passage', label: 'Long passage' },
+  { key: 'poetry', label: 'Poetry' },
+  { key: 'cloze_gap_fill', label: 'Cloze gap-fill' },
+  { key: 'multi_extract', label: 'Multi-extract matching' },
 ]
 
 const emptyBreakdown = (): ReadingErrorBreakdown => ({
@@ -45,6 +47,7 @@ export default function CheckInModal({
   checkin,
   tasks,
   settings,
+  holidayOverrides = [],
   onSave,
   onClose,
 }: CheckInModalProps) {
@@ -84,15 +87,15 @@ export default function CheckInModal({
   const addQuizLog = () => {
     const cleanName = testName.trim()
     if (!cleanName) {
-      setFormError('请填写测验名称。')
+      setFormError('Enter a test name.')
       return
     }
     if (totalQuestions < 1 || firstAttemptScore > totalQuestions) {
-      setFormError('请检查题目总数和一刷得分。')
+      setFormError('Check the total question count and first-attempt score.')
       return
     }
     if (subject === 'READING' && blindRetryScore > totalQuestions) {
-      setFormError('二刷盲改得分不能高于题目总数。')
+      setFormError('The blind-retry score cannot exceed the total number of questions.')
       return
     }
 
@@ -118,7 +121,7 @@ export default function CheckInModal({
 
   const save = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    const base = checkin ?? createEmptyCheckIn(date)
+    const base = checkin ?? createEmptyCheckIn(date, holidayOverrides)
     onSave({
       ...base,
       date,
@@ -132,7 +135,7 @@ export default function CheckInModal({
 
   const readingBrowseTask: TaskTemplate = {
     id: 'checkin-spellingbee-browse',
-    title: '打开 SpellingBee',
+    title: 'Open SpellingBee',
     subject: 'VOCAB',
     durationMinutes: 0,
     externalLinkType: 'SPELLING_BEE_OC_BROWSE',
@@ -159,9 +162,9 @@ export default function CheckInModal({
         <div className="modal-header">
           <div>
             <p className="eyebrow">DAILY CHECK-IN</p>
-            <h2 id="checkin-title">学习打卡</h2>
+            <h2 id="checkin-title">Study Check-in</h2>
             <p className="modal-date">
-              {new Intl.DateTimeFormat('zh-CN', {
+              {new Intl.DateTimeFormat('en-AU', {
                 year: 'numeric',
                 month: 'long',
                 day: 'numeric',
@@ -169,7 +172,7 @@ export default function CheckInModal({
               }).format(new Date(`${date}T00:00:00`))}
             </p>
           </div>
-          <button type="button" className="icon-button close-modal" onClick={onClose} aria-label="关闭">
+          <button type="button" className="icon-button close-modal" onClick={onClose} aria-label="Close">
             <X size={20} />
           </button>
         </div>
@@ -179,11 +182,11 @@ export default function CheckInModal({
             <section className="form-section">
               <div className="form-section-heading">
                 <div>
-                  <h3>今日学习</h3>
-                  <p>勾选完成任务，并记录实际学习时长。</p>
+                  <h3>Study session</h3>
+                  <p>Mark completed tasks and record your actual study time.</p>
                 </div>
                 <label className="minutes-input">
-                  <span>实际时长</span>
+                  <span>Actual time</span>
                   <span className="number-with-unit">
                     <input
                       type="number"
@@ -192,7 +195,7 @@ export default function CheckInModal({
                       value={actualMinutes}
                       onChange={(event) => setActualMinutes(Math.max(0, Number(event.target.value)))}
                     />
-                    <span>分钟</span>
+                    <span>min</span>
                   </span>
                 </label>
               </div>
@@ -212,7 +215,7 @@ export default function CheckInModal({
                     />
                     <span className="custom-check"><Check size={13} /></span>
                     <span>{task.title}</span>
-                    <small>{task.durationMinutes} 分钟</small>
+                    <small>{task.durationMinutes} min</small>
                   </label>
                 ))}
               </div>
@@ -221,8 +224,8 @@ export default function CheckInModal({
             <section className="form-section">
               <div className="form-section-heading">
                 <div>
-                  <h3>测验记录</h3>
-                  <p>保存一刷成绩；阅读测验再记录盲改和错题类型。</p>
+                  <h3>Test results</h3>
+                  <p>Record the first attempt; add the blind retry and error breakdown for Reading.</p>
                 </div>
               </div>
               {quizLogs.length > 0 && (
@@ -231,8 +234,8 @@ export default function CheckInModal({
                     <div className="saved-quiz" key={log.id}>
                       <span>
                         <strong>{log.testName}</strong>
-                        <small>{SUBJECT_OPTIONS.find((option) => option.value === log.subject)?.label} · 一刷 {log.firstAttemptScore}/{log.totalQuestions}
-                          {log.blindRetryScore !== undefined && ` · 盲改 ${log.blindRetryScore}/${log.totalQuestions}`}
+                        <small>{SUBJECT_OPTIONS.find((option) => option.value === log.subject)?.label} · First attempt {log.firstAttemptScore}/{log.totalQuestions}
+                          {log.blindRetryScore !== undefined && ` · Blind retry ${log.blindRetryScore}/${log.totalQuestions}`}
                         </small>
                       </span>
                       <button
@@ -240,7 +243,7 @@ export default function CheckInModal({
                         className="text-button danger-text"
                         onClick={() => setQuizLogs((current) => current.filter((item) => item.id !== log.id))}
                       >
-                        删除
+                        Remove
                       </button>
                     </div>
                   ))}
@@ -248,7 +251,7 @@ export default function CheckInModal({
               )}
               <div className="quiz-entry">
                 <label className="field-label">
-                  科目
+                  Subject
                   <select
                     value={subject}
                     onChange={(event) => setSubject(event.target.value as QuizSubject)}
@@ -259,17 +262,17 @@ export default function CheckInModal({
                   </select>
                 </label>
                 <label className="field-label">
-                  测验名称
+                  Test name
                   <input
                     type="text"
-                    placeholder="例如：W3 Reading Test 1"
+                    placeholder="e.g. W3 Reading Test 1"
                     value={testName}
                     onChange={(event) => setTestName(event.target.value)}
                   />
                 </label>
                 <div className="score-row">
                   <label className="field-label">
-                    一刷得分
+                    First-attempt score
                     <input
                       type="number"
                       min="0"
@@ -279,7 +282,7 @@ export default function CheckInModal({
                     />
                   </label>
                   <label className="field-label">
-                    题目总数
+                    Total questions
                     <input
                       type="number"
                       min="1"
@@ -289,7 +292,7 @@ export default function CheckInModal({
                   </label>
                   {subject === 'READING' && (
                     <label className="field-label">
-                      二刷盲改得分
+                      Blind-retry score
                       <input
                         type="number"
                         min="0"
@@ -305,8 +308,8 @@ export default function CheckInModal({
                   <div className="reading-review">
                     <div className="review-heading">
                       <div>
-                        <h4>四大题型错题数</h4>
-                        <p>按一刷错题所属题型记录</p>
+                        <h4>Errors by question type</h4>
+                        <p>Record each first-attempt error by section.</p>
                       </div>
                     </div>
                     <div className="error-counter-grid">
@@ -318,7 +321,7 @@ export default function CheckInModal({
                               type="button"
                               className="stepper-button"
                               onClick={() => updateErrorCount(key, -1)}
-                              aria-label={`${label}错题数减一`}
+                              aria-label={`Decrease ${label} errors`}
                             >
                               <Minus size={13} />
                             </button>
@@ -327,7 +330,7 @@ export default function CheckInModal({
                               type="button"
                               className="stepper-button"
                               onClick={() => updateErrorCount(key, 1)}
-                              aria-label={`${label}错题数加一`}
+                              aria-label={`Increase ${label} errors`}
                             >
                               <Plus size={13} />
                             </button>
@@ -342,28 +345,28 @@ export default function CheckInModal({
                         onChange={(event) => setVocabSynced(event.target.checked)}
                       />
                       <span className="custom-check"><Check size={13} /></span>
-                      <span>已将今日阅读生词录入 SpellingBee（OC 模式）</span>
+                      <span>I added today’s unfamiliar Reading words to SpellingBee (OC mode).</span>
                     </label>
                     {spellingBeeUrl ? (
                       <a className="secondary-link" href={spellingBeeUrl} target="_blank" rel="noopener noreferrer">
-                        打开 SpellingBee <Plus size={14} />
+                        Open SpellingBee <Plus size={14} />
                       </a>
                     ) : (
-                      <span className="helper-text">请先配置 SpellingBee 地址。</span>
+                      <span className="helper-text">Configure the SpellingBee URL in Settings first.</span>
                     )}
                   </div>
                 )}
                 {formError && <p className="form-error" role="alert">{formError}</p>}
                 <button type="button" className="secondary-button add-quiz-button" onClick={addQuizLog}>
-                  添加这条测验记录
+                  Add test result
                 </button>
               </div>
             </section>
           </div>
 
           <div className="modal-footer">
-            <button type="button" className="secondary-button" onClick={onClose}>取消</button>
-            <button type="submit" className="primary-button">保存打卡 <Check size={16} /></button>
+            <button type="button" className="secondary-button" onClick={onClose}>Cancel</button>
+            <button type="submit" className="primary-button">Save check-in <Check size={16} /></button>
           </div>
         </form>
       </section>

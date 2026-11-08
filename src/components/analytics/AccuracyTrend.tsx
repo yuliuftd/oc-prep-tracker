@@ -35,10 +35,10 @@ interface TrendPoint {
 }
 
 const SERIES: { key: MetricKey; label: string; color: string }[] = [
-  { key: 'readingFirst', label: '阅读一刷', color: '#bd6b83' },
-  { key: 'readingRetry', label: '阅读盲改', color: '#9271bd' },
-  { key: 'math', label: '数学', color: '#4d8fb1' },
-  { key: 'thinking', label: '思维', color: '#d29248' },
+  { key: 'readingFirst', label: 'Reading · First attempt', color: '#bd6b83' },
+  { key: 'readingRetry', label: 'Reading · Blind retry', color: '#9271bd' },
+  { key: 'math', label: 'Math', color: '#4d8fb1' },
+  { key: 'thinking', label: 'Thinking Skills', color: '#d29248' },
 ]
 
 function getMetric(log: QuizScoreLog): MetricKey {
@@ -119,9 +119,9 @@ export default function AccuracyTrend({ checkins }: AccuracyTrendProps) {
       <div className="section-heading chart-heading">
         <div>
           <p className="eyebrow">RECENT TEST PERFORMANCE</p>
-          <h2>近五次测验正确率</h2>
+          <h2>Rolling Accuracy · Last 5 Tests</h2>
         </div>
-        <span className="target-pill">目标 80%</span>
+        <span className="target-pill">80% target</span>
       </div>
       <div className="chart-legend trend-legend">
         {SERIES.map((series) => (
@@ -129,7 +129,7 @@ export default function AccuracyTrend({ checkins }: AccuracyTrendProps) {
         ))}
       </div>
       {data.length === 0 ? (
-        <p className="chart-empty">添加测验成绩后，这里会显示近五次测验的滚动平均正确率。</p>
+        <p className="chart-empty">Log test results to see the rolling average accuracy for your most recent five tests.</p>
       ) : (
         <div className="chart-wrap trend-chart">
           <ResponsiveContainer width="100%" height="100%">
@@ -137,7 +137,7 @@ export default function AccuracyTrend({ checkins }: AccuracyTrendProps) {
               <CartesianGrid stroke="#edf1ed" strokeDasharray="3 5" vertical={false} />
               <XAxis
                 dataKey="date"
-                tickFormatter={(value: string) => format(parseISO(value), 'M/d')}
+                tickFormatter={(value: string) => format(parseISO(value), 'MMM d')}
                 interval={Math.max(0, Math.ceil(data.length / 7) - 1)}
                 tick={{ fill: '#8a978e', fontSize: 10 }}
                 tickLine={false}
@@ -155,11 +155,11 @@ export default function AccuracyTrend({ checkins }: AccuracyTrendProps) {
               <Tooltip
                 labelFormatter={(value, payload) => {
                   const point = payload?.[0]?.payload as TrendPoint | undefined
-                  const date = format(parseISO(String(value)), 'M月d日')
+                  const date = format(parseISO(String(value)), 'MMM d')
                   return point?.testName ? `${date} · ${point.testName}` : date
                 }}
                 formatter={(value, name) => [
-                  value === null || value === undefined ? '暂无数据' : `${Number(value).toFixed(1)}%`,
+                  value === null || value === undefined ? 'No data yet' : `${Number(value).toFixed(1)}%`,
                   SERIES.find((series) => series.key === name)?.label ?? String(name),
                 ]}
                 contentStyle={{
@@ -192,7 +192,7 @@ export default function AccuracyTrend({ checkins }: AccuracyTrendProps) {
           </ResponsiveContainer>
         </div>
       )}
-      <p className="chart-note">每条曲线按该科目最近最多 5 次测验计算滑动平均。</p>
+      <p className="chart-note">Each line shows a rolling average of up to the five most recent tests for that subject.</p>
     </section>
   )
 }

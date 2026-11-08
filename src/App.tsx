@@ -6,7 +6,7 @@ import TodayQuests from './components/dashboard/TodayQuests'
 import WeeklyCalendar from './components/dashboard/WeeklyCalendar'
 import Navbar, { type AppView } from './components/layout/Navbar'
 import ConfigModal from './components/settings/ConfigModal'
-import { getCheckins, getSettings, saveCheckins } from './services/storageService'
+import { getCheckins, getSettings, saveCheckins, syncCheckinsWithGitHub } from './services/storageService'
 import { createEmptyCheckIn, getCurrentStreak, getTasksForDate } from './utils/scheduleEngine'
 import { EXAM_DATE } from './config/scheduleConfig'
 import type { AppSettings, CheckInMap, DailyCheckIn, PlannerData } from './types'
@@ -20,8 +20,11 @@ function App() {
   const [selectedDate, setSelectedDate] = useState(() => format(new Date(), 'yyyy-MM-dd'))
   const [isCheckInOpen, setIsCheckInOpen] = useState(false)
   const [isConfigOpen, setIsConfigOpen] = useState(false)
+  const [isSyncing, setIsSyncing] = useState(false)
+  const [syncStatus, setSyncStatus] = useState('')
   const [activeView, setActiveView] = useState<AppView>('planner')
-  const tasks = getTasksForDate(selectedDate)
+  const holidayOverrides = settings.holidayOverrides ?? []
+  const tasks = getTasksForDate(selectedDate, holidayOverrides)
   const selectedCheckIn = checkins[selectedDate]
   const daysUntilExam = Math.max(
     0,
@@ -34,7 +37,7 @@ function App() {
   }
 
   const toggleTask = (taskId: string) => {
-    const current = checkins[selectedDate] ?? createEmptyCheckIn(selectedDate)
+    const current = checkins[selectedDate] ?? createEmptyCheckIn(selectedDate, holidayOverrides)
     const completedTaskIds = current.completedTaskIds.includes(taskId)
       ? current.completedTaskIds.filter((id) => id !== taskId)
       : [...current.completedTaskIds, taskId]
@@ -49,6 +52,24 @@ function App() {
     setIsCheckInOpen(false)
   }
 
+  const syncData = async () => {
+    if (!settings.githubToken || !settings.githubRepo) {
+      setIsConfigOpen(true)
+      return
+    }
+    setIsSyncing(true)
+    setSyncStatus('')
+    try {
+      const synced = await syncCheckinsWithGitHub(settings, checkins)
+      setCheckins(synced)
+      setSyncStatus('Synced')
+    } catch (reason) {
+      setSyncStatus(reason instanceof Error ? reason.message : 'Sync failed')
+    } finally {
+      setIsSyncing(false)
+    }
+  }
+
   const streak = getCurrentStreak(checkins)
 
   return (
@@ -57,30 +78,37 @@ function App() {
         daysUntilExam={daysUntilExam}
         streak={streak}
         activeView={activeView}
+        isSyncing={isSyncing}
         onViewChange={setActiveView}
         onOpenSettings={() => setIsConfigOpen(true)}
+        onSync={() => void syncData()}
       />
+      {syncStatus && (
+        <p className={`sync-status${syncStatus === 'Synced' ? ' success' : ' error'}`} role="status">
+          {syncStatus}
+        </p>
+      )}
 
       <section className="welcome-section">
         <div>
           <p className="eyebrow"><span className="status-dot" /> YOUR STUDY SPACE</p>
           <h1>
             {activeView === 'planner' ? (
-              <>一步一步，<span>稳稳上岸。</span></>
+              <>One step at a time, <span>you’ve got this.</span></>
             ) : (
-              <>看见进步，<span>找到方向。</span></>
+              <>See your progress, <span>find your focus.</span></>
             )}
           </h1>
           <p className="welcome-copy">
             {activeView === 'planner'
-              ? '今天也为目标前进一点点。保持节奏，比一次冲刺更重要。'
-              : '复盘学习节奏与阅读错题，让每一次练习都有收获。'}
+              ? 'Make a little progress today. A steady rhythm beats a last-minute sprint.'
+              : 'Review your study habits and Reading errors to make every practice count.'}
           </p>
         </div>
         <div className="exam-date-card">
           <span>OC Placement Test</span>
           <strong>11 <small>MAY</small></strong>
-          <span>2027 · 考试日</span>
+          <span>2027 · Exam day</span>
           <ArrowDownRight className="exam-arrow" size={18} />
         </div>
       </section>
@@ -90,6 +118,7 @@ function App() {
           <WeeklyCalendar
             selectedDate={selectedDate}
             checkins={checkins}
+            holidayOverrides={holidayOverrides}
             onSelectDate={setSelectedDate}
           />
           <TodayQuests
@@ -102,14 +131,14 @@ function App() {
           />
         </>
       ) : (
-        <Suspense fallback={<div className="analytics-loading panel">正在加载进度图表…</div>}>
-          <AnalyticsView checkins={checkins} />
+        <Suspense fallback={<div className="analytics-loading panel">Loading progress charts…</div>}>
+          <AnalyticsView checkins={checkins} holidayOverrides={holidayOverrides} />
         </Suspense>
       )}
 
       <footer className="app-footer">
         <span>OC Prep Tracker</span>
-        <span>今天的努力，会成为明天的底气。</span>
+        <span>Today’s effort builds tomorrow’s confidence.</span>
       </footer>
 
       {isCheckInOpen && (
@@ -119,6 +148,7 @@ function App() {
           checkin={selectedCheckIn}
           tasks={tasks}
           settings={settings}
+          holidayOverrides={holidayOverrides}
           onSave={saveCheckIn}
           onClose={() => setIsCheckInOpen(false)}
         />

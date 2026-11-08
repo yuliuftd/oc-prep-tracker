@@ -10,16 +10,21 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
-import { NSW_SCHOOL_HOLIDAYS } from '../../config/scheduleConfig'
-import type { CheckInMap } from '../../types'
+import { EXAM_DATE, NSW_SCHOOL_HOLIDAYS, PLAN_START_DATE } from '../../config/scheduleConfig'
+import type { CheckInMap, HolidayRange } from '../../types'
 import { generateBurnUpSeries } from '../../utils/scheduleEngine'
 
 interface BurnUpChartProps {
   checkins: CheckInMap
+  holidayOverrides?: HolidayRange[]
 }
 
-export default function BurnUpChart({ checkins }: BurnUpChartProps) {
-  const data = generateBurnUpSeries(checkins)
+export default function BurnUpChart({
+  checkins,
+  holidayOverrides = [],
+}: BurnUpChartProps) {
+  const data = generateBurnUpSeries(checkins, PLAN_START_DATE, EXAM_DATE, holidayOverrides)
+  const holidayRanges = [...NSW_SCHOOL_HOLIDAYS, ...holidayOverrides]
   const today = format(new Date(), 'yyyy-MM-dd')
   const currentPoint = data.filter((point) => point.date <= today).at(-1)
   const finalPoint = currentPoint ?? data.at(-1)!
@@ -30,27 +35,27 @@ export default function BurnUpChart({ checkins }: BurnUpChartProps) {
     actualMinutes - plannedMinutes
   const differenceLabel =
     difference === 0
-      ? '正好在计划进度'
-      : `${Math.abs(difference).toLocaleString()} 分钟${difference > 0 ? '领先' : '落后'}计划`
+      ? 'On track'
+      : `${Math.abs(difference).toLocaleString()} min ${difference > 0 ? 'ahead of' : 'behind'} plan`
 
   return (
     <section className="analytics-panel panel burnup-panel">
       <div className="section-heading chart-heading">
         <div>
           <p className="eyebrow">26-WEEK STUDY PROGRESS</p>
-          <h2>累计学习时长</h2>
+          <h2>Cumulative Study Time</h2>
         </div>
         <div className={`pace-indicator ${difference >= 0 ? 'ahead' : 'behind'}`}>
-          <span>{difference > 0 ? '领先' : difference < 0 ? '落后' : '达成'}</span>
+          <span>{difference > 0 ? 'Ahead' : difference < 0 ? 'Behind' : 'On track'}</span>
           <strong>{differenceLabel}</strong>
-          <small>截至 {format(parseISO(asOfDate), 'M月d日')}</small>
+          <small>As of {format(parseISO(asOfDate), 'MMM d')}</small>
         </div>
       </div>
 
       <div className="chart-legend">
-        <span><i className="legend-planned" />计划累计</span>
-        <span><i className="legend-actual" />实际累计</span>
-        <span><i className="legend-holiday" />学校假期</span>
+        <span><i className="legend-planned" />Planned total</span>
+        <span><i className="legend-actual" />Actual total</span>
+        <span><i className="legend-holiday" />School holidays</span>
       </div>
       <div className="chart-wrap burnup-chart">
         <ResponsiveContainer width="100%" height="100%">
@@ -61,12 +66,12 @@ export default function BurnUpChart({ checkins }: BurnUpChartProps) {
                 <stop offset="100%" stopColor="#4a9a70" stopOpacity={0.025} />
               </linearGradient>
             </defs>
-            {NSW_SCHOOL_HOLIDAYS.map((holiday, index) => (
+            {holidayRanges.map((holiday, index) => (
               <ReferenceArea
                 key={holiday.name}
                 x1={holiday.startDate}
                 x2={holiday.endDate}
-                fill={index === 0 ? '#f6c875' : '#f2a28a'}
+                fill={index === 0 ? '#f6c875' : index === 1 ? '#f2a28a' : '#9ebce0'}
                 fillOpacity={0.12}
                 ifOverflow="hidden"
               />
@@ -74,7 +79,7 @@ export default function BurnUpChart({ checkins }: BurnUpChartProps) {
             <CartesianGrid stroke="#edf1ed" strokeDasharray="3 5" vertical={false} />
             <XAxis
               dataKey="date"
-              tickFormatter={(value: string) => format(parseISO(value), 'M/d')}
+              tickFormatter={(value: string) => format(parseISO(value), 'MMM d')}
               interval={27}
               tick={{ fill: '#8a978e', fontSize: 10 }}
               tickLine={false}
@@ -89,10 +94,10 @@ export default function BurnUpChart({ checkins }: BurnUpChartProps) {
               width={42}
             />
             <Tooltip
-              labelFormatter={(value) => format(parseISO(String(value)), 'yyyy年M月d日')}
+              labelFormatter={(value) => format(parseISO(String(value)), 'MMM d, yyyy')}
               formatter={(value, name) => [
-                `${Number(value).toLocaleString()} 分钟`,
-                name === 'plannedMinutes' ? '计划累计' : '实际累计',
+                `${Number(value).toLocaleString()} min`,
+                name === 'plannedMinutes' ? 'Planned total' : 'Actual total',
               ]}
               contentStyle={{
                 border: '1px solid #e6ece7',
@@ -103,7 +108,7 @@ export default function BurnUpChart({ checkins }: BurnUpChartProps) {
             <Area
               type="monotone"
               dataKey="actualMinutes"
-              name="实际累计"
+              name="Actual total"
               stroke="#37875f"
               strokeWidth={2.5}
               fill="url(#actualStudyFill)"
@@ -113,7 +118,7 @@ export default function BurnUpChart({ checkins }: BurnUpChartProps) {
             <Line
               type="stepAfter"
               dataKey="plannedMinutes"
-              name="计划累计"
+              name="Planned total"
               stroke="#d59044"
               strokeWidth={2}
               strokeDasharray="6 5"
@@ -125,8 +130,12 @@ export default function BurnUpChart({ checkins }: BurnUpChartProps) {
         </ResponsiveContainer>
       </div>
       <div className="holiday-caption">
-        <span><i className="summer-swatch" /> 暑假加速期：12/18 – 1/31</span>
-        <span><i className="autumn-swatch" /> 秋假冲刺期：4/10 – 4/25</span>
+        {holidayRanges.map((holiday, index) => (
+          <span key={`${holiday.name}-${holiday.startDate}`}>
+            <i className={index === 0 ? 'summer-swatch' : index === 1 ? 'autumn-swatch' : 'custom-holiday-swatch'} />
+            {holiday.name}: {format(parseISO(holiday.startDate), 'MMM d')} – {format(parseISO(holiday.endDate), 'MMM d')}
+          </span>
+        ))}
       </div>
     </section>
   )
